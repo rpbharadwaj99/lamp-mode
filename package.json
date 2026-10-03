@@ -1,0 +1,26 @@
+{
+  "name": "lamp-mode",
+  "version": "0.1.0",
+  "description": "A pull-cord dark mode toggle: a loose, physically simulated string that switches themes.",
+  "keywords": ["dark-mode", "theme", "toggle", "light-dark", "pull-cord", "ui", "verlet"],
+  "license": "MIT",
+  "author": "Rohan Bharadwaj",
+  "homepage": "https://github.com/rpbharadwaj99/lamp-mode#readme",
+  "repository": { "type": "git", "url": "git+https://github.com/rpbharadwaj99/lamp-mode.git" },
+  "bugs": { "url": "https://github.com/rpbharadwaj99/lamp-mode/issues" },
+  "main": "lamp-mode.js",
+  "browser": "lamp-mode.js",
+  "unpkg": "lamp-mode.js",
+  "jsdelivr": "lamp-mode.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": { "types": "./index.d.ts", "default": "./lamp-mode.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["lamp-mode.js", "index.d.ts", "README.md", "LICENSE"],
+  "sideEffects": false,
+  "scripts": {
+    "test": "node -e \"const L=require('./lamp-mode.js');if(typeof L.init!=='function'||L.init()!==null)process.exit(1)\"",
+    "demo": "python3 -m http.server 8472"
+  }
+}
