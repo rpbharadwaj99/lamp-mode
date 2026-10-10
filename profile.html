@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lamp Mode profile</title>
+<style>
+  :root { --bg:#fafaf7; --fg:#1c1c1a; }
+  [data-theme="dark"] { --bg:#141416; --fg:#e8e8e4; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui,sans-serif; }
+  body.fade { transition:background .3s,color .3s; }
+  main { padding:2.5rem 1rem 3rem; max-width:40rem; margin:0 auto; }
+  pre { white-space:pre-wrap; font:13px/1.4 ui-monospace,Menlo,monospace; }
+  .filler p { margin:0 0 .8rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Lamp Mode profile</h1>
+  <p id="status">starting…</p>
+  <pre id="out"></pre>
+  <div class="filler" id="filler"></div>
+</main>
+<script>
+/* Profiles a patched copy of lamp-mode.js: wall time spent in step() and draw(),
+   plus rAF frame intervals and long tasks, under a scripted click-mash.
+   Variants isolate where the cost lives. Usage: open this page; it runs itself.
+   ?auto=0 to wait, ?run=A,B to pick variants. */
+const q = new URLSearchParams(location.search);
+const out = document.getElementById('out'), status = document.getElementById('status');
+document.getElementById('filler').innerHTML = Array.from({length: 40}, (_, i) =>
+  '<p>Filler paragraph ' + i + ' so a theme flip repaints a realistic amount of text on the page.</p>').join('');
+const log = s => { out.textContent += s + '\n'; };
+
+async function load() {
+  let src = await (await fetch('lamp-mode.js')).text();
+  src = src.replace('function draw() {', 'function draw() { var _t=performance.now(); draw_(); P.draw+=performance.now()-_t; P.draws++; }\n    function draw_() {')
+           .replace('function step() {', 'function step() { var _t=performance.now(); var r=step_(); P.step+=performance.now()-_t; P.steps++; return r; }\n    function step_() {');
+  return src;
+}
+const P = window.P = { step: 0, steps: 0, draw: 0, draws: 0 };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const pct = (a, p) => a.length ? a.slice().sort((x, y) => x - y)[Math.min(a.length - 1, Math.floor(a.length * p))] : 0;
+
+async function variant(name, opts, src) {
+  // fresh instance each time
+  document.querySelectorAll('.lm').forEach(e => e.remove());
+  document.body.classList.toggle('fade', !!opts.fade);
+  document.documentElement.dataset.theme = 'light';
+  try { localStorage.removeItem('lamp-mode-theme'); } catch (e) {}
+  delete window.LampMode;
+  const s = document.createElement('script');
+  s.textContent = src.replace('function (root, factory)', 'function (root, factory)');
+  document.head.appendChild(s);
+  const inst = LampMode.init({});
+  if (opts.noTheme) { // measure rope alone: stop the cord touching the page theme
+    const set = Element.prototype.setAttribute;
+    document.documentElement.setAttribute = function (k, v) { if (k !== 'data-theme') set.call(this, k, v); };
+  }
+  await sleep(2500); // let load animation settle
+  Object.assign(P, { step: 0, steps: 0, draw: 0, draws: 0 });
+  const dts = []; let last = performance.now(), long = 0, running = true;
+  const po = new PerformanceObserver(l => l.getEntries().forEach(e => long += e.duration));
+  try { po.observe({ entryTypes: ['longtask'] }); } catch (e) {}
+  (function tick(t) { if (!running) return; dts.push(t - last); last = t; requestAnimationFrame(tick); })(performance.now());
+  const t0 = performance.now();
+  for (let i = 0; i < 30; i++) { inst.el.click(); await sleep(100); }   // 3s mash
+  const mashEnd = performance.now();
+  await sleep(2500);                                                   // settle
+  running = false; po.disconnect();
+  if (opts.noTheme) delete document.documentElement.setAttribute;
+  const mash = dts.slice(0, Math.max(1, Math.round((mashEnd - t0) / 16)));
+  return {
+    name, frames: dts.length,
+    dt_avg: +(dts.reduce((a, b) => a + b, 0) / dts.length).toFixed(1),
+    dt_p95: +pct(dts, 0.95).toFixed(1), dt_max: +Math.max(...dts).toFixed(1),
+    mash_p95: +pct(mash, 0.95).toFixed(1), slow_frames: dts.filter(d => d > 25).length,
+    step_ms_per_call: +(P.step / Math.max(1, P.steps)).toFixed(4), steps: P.steps,
+    draw_ms_per_call: +(P.draw / Math.max(1, P.draws)).toFixed(4), draws: P.draws,
+    js_ms_total: +(P.step + P.draw).toFixed(1), longtask_ms: Math.round(long)
+  };
+}
+
+(async () => {
+  if (q.get('auto') === '0') return;
+  const src = await load();
+  const all = {
+    A: ['A page+fade (as shipped demo)', { fade: true }],
+    B: ['B page no fade transition', { fade: false }],
+    C: ['C rope only (page theme untouched)', { fade: false, noTheme: true }]
+  };
+  const want = (q.get('run') || 'A,B,C').split(',');
+  const rows = [];
+  for (const k of want) {
+    status.textContent = 'running ' + k + '…';
+    rows.push(await variant(all[k][0], all[k][1], src));
+    const r = rows[rows.length - 1];
+    log(k + ' fps~' + (1000 / r.dt_avg).toFixed(0) + ' dt avg/p95/max ' + r.dt_avg + '/' + r.dt_p95 + '/' + r.dt_max +
+        '\n  slow>25ms: ' + r.slow_frames + '  longtask ms: ' + r.longtask_ms +
+        '\n  step ms: ' + r.step_ms_per_call + '  draw ms: ' + r.draw_ms_per_call + '  js total ms: ' + r.js_ms_total + '\n');
+  }
+  status.textContent = 'done · ' + navigator.userAgent.slice(0, 90);
+  window.RESULT = rows;
+  document.title = 'DONE';
+})();
+</script>
+</body>
+</html>

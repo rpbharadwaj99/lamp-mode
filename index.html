@@ -2,11 +2,12 @@
 <html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Lamp Mode</title>
 <style>
   :root { --bg:#fafaf7; --fg:#1c1c1a; }
   [data-theme="dark"] { --bg:#141416; --fg:#e8e8e4; }
+  html { touch-action:manipulation; } /* no double-tap zoom */
   body { margin:0; background:var(--bg); color:var(--fg); transition:background .3s,color .3s;
          font:18px/1.6 system-ui,sans-serif; }
   main { max-width:36rem; margin:30vh auto 0; padding:0 1.5rem; }

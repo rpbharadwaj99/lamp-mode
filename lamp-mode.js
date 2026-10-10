@@ -20,9 +20,10 @@
   var GRAVITY = 0.35, DAMP = 0.965;     // per frame
   var CSS = [
     '.lm{position:fixed;top:0;z-index:9999;width:24px;height:130px;padding:0;border:0;',
-    '  background:none;cursor:pointer;color:var(--lm-color);overflow:visible;',
+    '  background:none;cursor:pointer;color:var(--lm-color);overflow:visible;touch-action:manipulation;',
     '  -webkit-tap-highlight-color:transparent}',
-    '.lm-right{right:24px}.lm-left{left:24px}',
+    '.lm-right{right:24px;right:calc(24px + env(safe-area-inset-right,0px))}',
+    '.lm-left{left:24px;left:calc(24px + env(safe-area-inset-left,0px))}',
     '.lm svg{display:block;overflow:visible;pointer-events:none}'
   ].join('');
 

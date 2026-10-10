@@ -67,6 +67,20 @@ to `init()` or set the CSS variable anywhere above it:
 :root { --lm-color: tomato; }
 ```
 
+### iPhone: hang from the very top
+
+By default Safari keeps page content below the status bar / Dynamic Island, so
+the cord starts there. To let it hang from the physical top edge, opt your page
+into the full screen in the viewport tag:
+
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+```
+
+Lamp Mode is already pinned at `top: 0` and offsets itself by the left/right
+safe-area insets in landscape. With `viewport-fit=cover` the rest of your page
+should pad itself with `env(safe-area-inset-top)` where needed.
+
 ## Behavior
 
 - Light is the short resting length; dark is the cord pulled further down, so the
